@@ -1,0 +1,578 @@
+
+Users API
+
+@router.post("/user/", response_model=User)
+async def create_user(user: User, controller: UserController = Depends(get_user_controller)):
+    """
+    Endpoint to create a new user.
+
+    Args:
+    - user (User): User data to be created.
+
+    Returns:
+    - User: Created user data.
+
+    Raises:
+    - HTTPException: If there is an error creating the user (status_code=400).
+    """
+    try:
+        controller.create_user(user)
+        return user
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/get_all_users", response_model=List[User])
+async def get_all_users(controller: UserController = Depends(get_user_controller)):
+    """
+    Endpoint to retrieve all users.
+
+    Returns:
+    - List[User]: List of all users.
+
+    Note:
+    - This endpoint expects no parameters.
+    """
+    users = controller.get_all_users()
+    return users
+
+@router.put("/users/{user_id}")
+async def update_user(user_id: str, user: User, controller: UserController = Depends(get_user_controller)):
+    """
+    Endpoint to update a user by user ID.
+
+    Args:
+    - user_id (str): ID of the user to update.
+    - user (User): Updated user data.
+
+    Returns:
+    - dict: Success message upon successful update.
+
+    Raises:
+    - HTTPException: If user is not found (status_code=404).
+    """
+    user_data = user.dict()
+    result = controller.update_user(user_id, user_data)
+    return result
+
+@router.delete("/users/{user_id}")
+async def delete_user(user_id: str, controller: UserController = Depends(get_user_controller)):
+    """
+    Endpoint to delete a user by user ID.
+
+    Args:
+    - user_id (str): ID of the user to delete.
+
+    Returns:
+    - dict: Success message upon successful deletion.
+
+    Raises:
+    - HTTPException: If user is not found (status_code=404).
+    """
+    result = controller.delete_user(user_id)
+    return result
+
+@router.get("/user/{user_id}", response_model=User)
+async def get_user_with_addresses(user_id: str, controller: UserController = Depends(get_user_controller)):
+    """
+    Endpoint to retrieve a user along with their addresses by user ID.
+
+    Args:
+    - user_id (str): ID of the user to retrieve.
+
+    Returns:
+    - User: User data including their addresses.
+
+    Raises:
+    - HTTPException: If user is not found (status_code=404).
+    """
+    user = controller.get_user_with_addresses(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@router.get("/orders_details_user/{order_id}/{user_id}/{order_status}")
+def get_orders_by_criteria(order_id: str, user_id: str, order_status: str,
+                           controller: UserController = Depends(get_user_controller)):
+    """
+    Endpoint to retrieve orders based on specific criteria.
+
+    Args:
+    - order_id (str): ID of the order to retrieve.
+    - user_id (str): ID of the user who placed the order.
+    - order_status (str): Status of the order to retrieve.
+
+    Returns:
+    - dict: Dictionary containing orders matching the criteria.
+
+    Note:
+    - This endpoint expects three path parameters.
+    """
+    orders_by_criteria = controller.get_order_status_by_criteria(order_id, user_id, order_status)
+    return {"orders": orders_by_criteria}
+
+@router.get("/order_status_count/{user_id}")
+async def order_status_count(user_id: str, controller: UserController = Depends(get_user_controller)):
+    """
+    Endpoint to retrieve order status counts based on user ID.
+
+    Args:
+    - user_id (str): ID of the user whose order status counts to retrieve.
+
+    Returns:
+    - dict: Dictionary mapping OrderStatus values to their respective counts.
+
+    Note:
+    - This endpoint expects one path parameter.
+    """
+    status_count = controller.get_order_status_count(user_id)
+    return status_count
+
+@router.get("/orders/{order_status}/{user_id}")
+async def get_orders(order_status: OrderStatus, user_id: str,
+                     controller: UserController = Depends(get_user_controller)):
+    """
+    Endpoint to retrieve orders based on order status and user ID.
+
+    Args:
+    - order_status (OrderStatus): Status of the orders to retrieve.
+    - user_id (str): ID of the user whose orders to retrieve.
+
+    Returns:
+    - List[OrderOut]: List of orders matching the criteria.
+
+    Note:
+    - This endpoint expects two path parameters.
+    """
+    orders = controller.get_orders_by_status_and_user(order_status.value, user_id)
+    return orders
+
+@router.post("/sign_out/{user_id}")
+def sign_out_user(user_id: str, controller: UserController = Depends(get_user_controller)):
+    """
+    Endpoint to sign out a user by user ID.
+
+    Args:
+    - user_id (str): ID of the user to sign out.
+
+    Returns:
+    - dict: Success message upon successful sign-out.
+
+    Note:
+    - This endpoint expects one path parameter.
+    """
+    controller.sign_out_user(user_id)
+    return {"message": f"User with ID {user_id} signed out successfully."}
+
+
+Stocks API to add
+
+
+@router.post("/stocks/", response_model=AddNewStockModel)
+async def create_stock(stock_data: AddNewStockModel = Body(...),
+                       controller: AddNewStockController = Depends(get_add_new_stock)):
+    """
+    Endpoint to create a new stock entry.
+
+    Args:
+    - stock_data (AddNewStockModel): Data to create a new stock entry.
+
+    Returns:
+    - AddNewStockModel: Created stock data.
+
+    Raises:
+    - HTTPException: If there is an error creating the stock (status_code=500).
+    """
+    try:
+        return controller.create_stock(stock_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/stocks/{stock_id}", response_model=AddNewStockModel)
+async def read_stock(stock_id: str, controller: AddNewStockController = Depends(get_add_new_stock)):
+    """
+    Endpoint to retrieve stock details by stock ID.
+
+    Args:
+    - stock_id (str): ID of the stock to retrieve.
+
+    Returns:
+    - AddNewStockModel: Stock data.
+
+    Raises:
+    - HTTPException: If stock is not found (status_code=404) or if there's an internal server error (status_code=500).
+    """
+    try:
+        stock_data = controller.get_stock_by_id(stock_id)
+        if stock_data:
+            return stock_data
+        else:
+            raise HTTPException(status_code=404, detail="Stock not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/stocks/{stock_id}", response_model=AddNewStockModel)
+async def update_stock(stock_id: str, stock_data: AddNewStockModel = Body(...),
+                       controller: AddNewStockController = Depends(get_add_new_stock)):
+    """
+    Endpoint to update stock details by stock ID.
+
+    Args:
+    - stock_id (str): ID of the stock to update.
+    - stock_data (AddNewStockModel): Updated stock data.
+
+    Returns:
+    - AddNewStockModel: Updated stock data.
+
+    Raises:
+    - HTTPException: If stock is not found (status_code=404) or if there's an internal server error (status_code=500).
+    """
+    try:
+        existing_stock = controller.get_stock_by_id(stock_id)
+        if existing_stock:
+            updated_stock = controller.update_stock(stock_id, stock_data)
+            return updated_stock
+        else:
+            raise HTTPException(status_code=404, detail="Stock not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/stocks/{stock_id}")
+async def delete_stock(stock_id: str, controller: AddNewStockController = Depends(get_add_new_stock)):
+    """
+    Endpoint to delete stock by stock ID.
+
+    Args:
+    - stock_id (str): ID of the stock to delete.
+
+    Returns:
+    - dict: Success message upon successful deletion.
+
+    Raises:
+    - HTTPException: If stock is not found (status_code=404) or if there's an internal server error (status_code=500).
+    """
+    try:
+        existing_stock = controller.get_stock_by_id(stock_id)
+        if existing_stock:
+            controller.delete_stock(stock_id)
+            return {"message": "Stock deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Stock not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+Banners API
+
+@router.post("/banners/")
+def create_banner(banner: BannerModel, controller: BannerController = Depends(get_banner_controller)):
+    """
+    Endpoint to create a new banner.
+
+    Args:
+    - banner (BannerModel): Data representing the banner to create.
+
+    Returns:
+    - dict: Response message confirming successful banner creation.
+
+    Raises:
+    - HTTPException: If there is an error creating the banner (status_code=500).
+    """
+    try:
+        controller.create_banner(banner)
+        return {"message": "Banner created successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/banners", response_model=list[BannerModel])
+async def get_all_banners(controller: BannerController = Depends(get_banner_controller)):
+    """
+    Endpoint to retrieve all banners.
+
+    Returns:
+    - list[BannerModel]: List of all banners.
+
+    Raises:
+    - HTTPException: If there is an error retrieving banners (status_code=500).
+    """
+    try:
+        banners = controller.get_all_banners()
+        return banners
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/banners/{banner_id}", response_model=BannerModel)
+def read_banner(banner_id: str, controller: BannerController = Depends(get_banner_controller)):
+    """
+    Endpoint to retrieve a banner by ID.
+
+    Args:
+    - banner_id (str): ID of the banner to retrieve.
+
+    Returns:
+    - BannerModel: Banner data.
+
+    Raises:
+    - HTTPException: If banner is not found (status_code=404) or if there's an internal server error (status_code=500).
+    """
+    try:
+        banner_data = controller.get_banner(banner_id)
+        if banner_data:
+            return banner_data
+        else:
+            raise HTTPException(status_code=404, detail="Banner not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/banners/{banner_id}")
+def update_banner(banner_id: str, banner: BannerModelIn, controller: BannerController = Depends(get_banner_controller)):
+    """
+    Endpoint to update a banner by ID.
+
+    Args:
+    - banner_id (str): ID of the banner to update.
+    - banner (BannerModelIn): Updated banner data.
+
+    Returns:
+    - dict: Response message confirming successful banner update.
+
+    Raises:
+    - HTTPException: If banner is not found (status_code=404) or if there's an internal server error (status_code=500).
+    """
+    try:
+        banner_data = banner.dict(exclude_unset=True)
+        controller.update_banner(banner_id, banner_data)
+        return {"message": "Banner updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/banners/{banner_id}")
+def delete_banner(banner_id: str, controller: BannerController = Depends(get_banner_controller)):
+    """
+    Endpoint to delete a banner by ID.
+
+    Args:
+    - banner_id (str): ID of the banner to delete.
+
+    Returns:
+    - dict: Response message confirming successful banner deletion.
+
+    Raises:
+    - HTTPException: If banner is not found (status_code=404) or if there's an internal server error (status_code=500).
+    """
+    try:
+        controller.delete_banner(banner_id)
+        return {"message": "Banner deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+Add to cart APIS
+
+@router.post("/add_to_cart", response_model=Cart)
+def create_cart(cart: Cart):
+    """
+    Endpoint to create a new cart entry.
+
+    Args:
+    - cart (Cart): Data representing the cart entry to create.
+
+    Returns:
+    - Cart: Created cart entry data.
+
+    Raises:
+    - HTTPException: If there is an error creating the cart entry (status_code=500).
+    """
+    try:
+        return cart_controller.create_cart(cart)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/get_cart/{cart_id}", response_model=Cart)
+def read_cart(cart_id: str):
+    """
+    Endpoint to retrieve a cart entry by ID.
+
+    Args:
+    - cart_id (str): ID of the cart entry to retrieve.
+
+    Returns:
+    - Cart: Cart entry data.
+
+    Raises:
+    - HTTPException: If cart entry is not found (status_code=404) or if there's an internal server error (status_code=500).
+    """
+    try:
+        cart_data = cart_controller.read_cart(cart_id)
+        if cart_data:
+            return cart_data
+        else:
+            raise HTTPException(status_code=404, detail="Cart entry not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/update_cart/{cart_id}", response_model=Cart)
+def update_cart(cart_id: str, cart: Cart):
+    """
+    Endpoint to update a cart entry by ID.
+
+    Args:
+    - cart_id (str): ID of the cart entry to update.
+    - cart (Cart): Updated cart entry data.
+
+    Returns:
+    - Cart: Updated cart entry data.
+
+    Raises:
+    - HTTPException: If cart entry is not found (status_code=404) or if there's an internal server error (status_code=500).
+    """
+    try:
+        return cart_controller.update_cart(cart_id, cart)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/delete_cart/{cart_id}", response_model=Cart)
+def delete_cart(cart_id: str):
+    """
+    Endpoint to delete a cart entry by ID.
+
+    Args:
+    - cart_id (str): ID of the cart entry to delete.
+
+    Returns:
+    - Cart: Deleted cart entry data.
+
+    Raises:
+    - HTTPException: If cart entry is not found (status_code=404) or if there's an internal server error (status_code=500).
+    """
+    try:
+        return cart_controller.delete_cart(cart_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/post_categories", response_model=CategoryResponse, status_code=201)
+async def create_category(category: Category, controller: CategoryController = Depends(get_category_controller)):
+    """
+    Create a new category.
+
+    - **category**: Category information to be created.
+    - **controller**: Instance of CategoryController to handle database operations.
+
+    Returns the created category.
+    """
+    return await controller.create_category(category)
+
+@router.get("/get_all_categories", response_model=List[CategoryResponse])
+async def get_all_categories(controller: CategoryController = Depends(get_category_controller)):
+    """
+    Retrieve all categories.
+
+    - **controller**: Instance of CategoryController to handle database operations.
+
+    Returns a list of all categories.
+    """
+    return await controller.get_all_categories()
+
+@router.get("/categories/{category_id}", response_model=CategoryResponse)
+async def read_category(category_id: str, controller: CategoryController = Depends(get_category_controller)):
+    """
+    Retrieve a specific category by ID.
+
+    - **category_id**: ID of the category to retrieve.
+    - **controller**: Instance of CategoryController to handle database operations.
+
+    Returns the requested category.
+    """
+    return await controller.read_category(category_id)
+
+@router.put("/categories/{category_id}", response_model=CategoryResponse)
+async def update_category(category_id: str, category: Category,
+                          controller: CategoryController = Depends(get_category_controller)):
+    """
+    Update a category by ID.
+
+    - **category_id**: ID of the category to update.
+    - **category**: New category information.
+    - **controller**: Instance of CategoryController to handle database operations.
+
+    Returns the updated category.
+    """
+    return await controller.update_category(category_id, category)
+
+@router.delete("/categories/{category_id}", response_model=dict)
+async def delete_category(category_id: str, controller: CategoryController = Depends(get_category_controller)):
+    """
+    Delete a category by ID.
+
+    - **category_id**: ID of the category to delete.
+    - **controller**: Instance of CategoryController to handle database operations.
+
+    Returns a message confirming successful deletion.
+    """
+    return await controller.delete_category(category_id)
+
+
+@router.post("/create_complaints", response_model=ComplaintsModel, status_code=201)
+def create_complaints(complaints: ComplaintsModel, controller: ComplaintsController = Depends(get_complaints_controller)):
+    """
+    Create a new complaint.
+
+    - **complaints**: Complaint information to be created.
+    - **controller**: Instance of ComplaintsController to handle database operations.
+
+    Returns the created complaint.
+    """
+    return controller.create_complaint(complaints)
+
+@router.get("/get_all_complaints", response_model=list[ComplaintsModel])
+def get_all_complaints(controller: ComplaintsController = Depends(get_complaints_controller)):
+    """
+    Retrieve all complaints.
+
+    - **controller**: Instance of ComplaintsController to handle database operations.
+
+    Returns a list of all complaints.
+    """
+    return controller.get_all_complaints()
+
+@router.get("/complaints/{ticket_id}", response_model=ComplaintsModel)
+async def read_complaint(ticket_id: str, controller: ComplaintsController = Depends(get_complaints_controller)):
+    """
+    Retrieve a specific complaint by ticket ID.
+
+    - **ticket_id**: ID of the complaint to retrieve.
+    - **controller**: Instance of ComplaintsController to handle database operations.
+
+    Returns the requested complaint.
+    """
+    complaint_data = controller.get_complaint_data(ticket_id)
+    if complaint_data:
+        return complaint_data
+    else:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+
+@router.put("/update_complaints/{complaint_id}", response_model=ComplaintsModel)
+async def update_complaints(complaint_id: str, complaintModel: ComplaintsModel, controller: ComplaintsController = Depends(get_complaints_controller)):
+    """
+    Update a complaint by ID.
+
+    - **complaint_id**: ID of the complaint to update.
+    - **complaintModel**: New complaint information.
+    - **controller**: Instance of ComplaintsController to handle database operations.
+
+    Returns the updated complaint.
+    """
+    return controller.update_complaint(complaint_id, complaintModel)
+
+@router.delete("/delete_complaints/{complaint_id}", response_model=dict)
+async def delete_complaints(complaint_id: str, controller: ComplaintsController = Depends(get_complaints_controller)):
+    """
+    Delete a complaint by ID.
+
+    - **complaint_id**: ID of the complaint to delete.
+    - **controller**: Instance of ComplaintsController to handle database operations.
+
+    Returns a message confirming successful deletion.
+    """
+    return controller.delete_complaint(complaint_id)
